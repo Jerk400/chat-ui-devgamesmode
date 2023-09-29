@@ -1,3 +1,17 @@
+# Test New LLMs (CodeLlama, Llama2, etc.) 
+
+Notice you forked chat-ui. if you're trying to test other LLMs (codellama, wizardcoder, etc.) with it, I just wrote a [1-click proxy](https://github.com/BerriAI/litellm#openai-proxy-server) to translate openai calls to huggingface, anthropic, togetherai, etc. api calls.
+
+**code**
+```
+$ pip install litellm
+$ litellm --model huggingface/bigcode/starcoder
+#INFO:     Uvicorn running on http://0.0.0.0:8000
+$ aider --openai-api-base http://0.0.0.0:8000
+```
+
+I'd love to know if this solves a problem for you
+
 ---
 title: chat-ui
 emoji: 🔥
@@ -14,7 +28,7 @@ app_port: 3000
 
 ![Chat UI repository thumbnail](https://huggingface.co/datasets/huggingface/documentation-images/raw/f038917dd40d711a72d654ab1abfc03ae9f177e6/chat-ui-repo-thumbnail.svg)
 
-A chat interface using open source models, eg OpenAssistant. It is a SvelteKit app and it powers the [HuggingChat app on hf.co/chat](https://huggingface.co/chat).
+A chat interface using open source models, eg OpenAssistant or Llama. It is a SvelteKit app and it powers the [HuggingChat app on hf.co/chat](https://huggingface.co/chat).
 
 0. [No Setup Deploy](#no-setup-deploy)
 1. [Setup](#setup)
@@ -28,6 +42,7 @@ A chat interface using open source models, eg OpenAssistant. It is a SvelteKit a
 If you don't want to configure, setup, and launch your own Chat UI yourself, you can use this option as a fast deploy alternative.
 
 You can deploy your own customized Chat UI instance with any supported LLM of your choice with only a few clicks to Hugging Face Spaces thanks to the Chat UI Spaces Docker template. Get started [here](https://huggingface.co/new-space?template=huggingchat/chat-ui-template).
+If you'd like to deploy a model with gated access or a model in a private repository, you can simply provide `HUGGING_FACE_HUB_TOKEN` in [Space secrets](https://huggingface.co/docs/hub/spaces-overview#managing-secrets-and-environment-variables). You need to set its value to an access token you can get from [here](https://huggingface.co/settings/tokens).
 
 Read the full tutorial [here](https://huggingface.co/docs/hub/spaces-sdks-docker-chatui#chatui-on-spaces).
 
@@ -54,11 +69,11 @@ docker run -d -p 27017:27017 --name mongo-chatui mongo:latest
 
 In which case the url of your DB will be `MONGODB_URL=mongodb://localhost:27017`.
 
-Alternatively, you can use a [free MongoDB Atlas](https://www.mongodb.com/pricing) instance for this, Chat UI should fit comfortably within the free tier. After which you can set the `MONGODB_URL` variable in `.env.local` to match your instance.
+Alternatively, you can use a [free MongoDB Atlas](https://www.mongodb.com/pricing) instance for this, Chat UI should fit comfortably within their free tier. After which you can set the `MONGODB_URL` variable in `.env.local` to match your instance.
 
 ### Hugging Face Access Token
 
-You will need a Hugging Face access token to run Chat UI locally, using the remote inference endpoints. You can get one from [your Hugging Face profile](https://huggingface.co/settings/tokens).
+You will need a Hugging Face access token to run Chat UI locally, if you use a remote inference endpoint. You can get one from [your Hugging Face profile](https://huggingface.co/settings/tokens).
 
 ## Launch
 
@@ -117,9 +132,11 @@ MODELS=`[
     "datasetName": "OpenAssistant/oasst1",
     "description": "A good alternative to ChatGPT",
     "websiteUrl": "https://open-assistant.io",
-    "userMessageToken": "<|prompter|>",
-    "assistantMessageToken": "<|assistant|>",
-    "messageEndToken": "</s>",
+    "userMessageToken": "<|prompter|>", # This does not need to be a token, can be any string
+    "assistantMessageToken": "<|assistant|>", # This does not need to be a token, can be any string
+    "messageEndToken": "<|endoftext|>", # This does not need to be a token, can be any string
+    # "userMessageEndToken": "", # Applies only to user messages, messageEndToken has no effect if specified. Can be any string.
+    # "assistantMessageEndToken": "", # Applies only to assistant messages, messageEndToken has no effect if specified. Can be any string.
     "preprompt": "Below are a series of dialogues between various people and an AI assistant. The AI tries to be helpful, polite, honest, sophisticated, emotionally aware, and humble-but-knowledgeable. The assistant is happy to help with almost anything, and will do its best to understand exactly what is needed. It also tries to avoid giving false or misleading information, and it caveats when it isn't entirely sure about the right answer. That said, the assistant is practical and really does its best, and doesn't let caution get too much in the way of being useful.\n-----\n",
     "promptExamples": [
       {
@@ -139,7 +156,8 @@ MODELS=`[
       "repetition_penalty": 1.2,
       "top_k": 50,
       "truncate": 1000,
-      "max_new_tokens": 1024
+      "max_new_tokens": 1024,
+      "stop": ["<|endoftext|>"]  # This does not need to be tokens, can be any list of strings
     }
   }
 ]`
@@ -150,7 +168,11 @@ You can change things like the parameters, or customize the preprompt to better 
 
 #### Running your own models using a custom endpoint
 
-If you want to, you can even run your own models locally, by having a look at our endpoint project, [text-generation-inference](https://github.com/huggingface/text-generation-inference). You can then add your own endpoints to the `MODELS` variable in `.env.local`, by adding an `"endpoints"` key for each model in `MODELS`.
+If you want to, instead of hitting models on the Hugging Face Inference API, you can run your own models locally.
+
+A good option is to hit a [text-generation-inference](https://github.com/huggingface/text-generation-inference) endpoint. This is what is done in the official [Chat UI Spaces Docker template](https://huggingface.co/new-space?template=huggingchat/chat-ui-template) for instance: both this app and a text-generation-inference server run inside the same container.
+
+To do this, you can add your own endpoints to the `MODELS` variable in `.env.local`, by adding an `"endpoints"` key for each model in `MODELS`.
 
 ```
 
